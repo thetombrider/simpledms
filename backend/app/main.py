@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from .core.config import get_settings
 from .core.database import init_db
@@ -37,7 +38,36 @@ app.include_router(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database connection on startup"""
-    await init_db()
+    app.state.db_client = await init_db()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connection on shutdown"""
+    if hasattr(app.state, "db_client"):
+        app.state.db_client.close()
+
+@app.get("/health")
+async def health_check():
+    """Check service health status"""
+    try:
+        # Check database connection
+        await app.state.db_client.server_info()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "version": app.version,
+            "environment": settings.ENVIRONMENT
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "unhealthy",
+                "database": "disconnected",
+                "error": str(e)
+            }
+        )
 
 @app.get("/")
 async def root():

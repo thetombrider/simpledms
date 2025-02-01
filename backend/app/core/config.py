@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # MongoDB settings
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "simpledms"
+    ENVIRONMENT: str = "development"
     
     # B2 settings
     B2_KEY_ID: str
@@ -21,8 +22,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # CORS Settings
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:8501"]  # Streamlit default port
+    # CORS configuration
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:8501",  # Streamlit default port
+        "http://localhost:8080",  # Backend API port
+        "http://127.0.0.1:8501",
+        "http://127.0.0.1:8080",
+    ]
     
     class Config:
         env_file = ".env"
