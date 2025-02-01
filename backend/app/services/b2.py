@@ -2,21 +2,20 @@ from typing import BinaryIO, Optional, Union
 from fastapi import HTTPException
 from b2sdk.v2 import B2Api, InMemoryAccountInfo, Bucket
 from b2sdk.v2.exception import B2Error, FileNotPresent
-from ..core.config import get_settings
+from ..core.config import get_settings, settings
 import io
 
 class B2Service:
+    """Service for interacting with Backblaze B2"""
     def __init__(self):
-        settings = get_settings()
-        
-        # Initialize B2 API
+        # Initialize B2 API with in-memory account info
         self.info = InMemoryAccountInfo()
         self.api = B2Api(self.info)
         
         # Authenticate
-        self.api.authorize_account("production", settings.B2_APPLICATION_KEY_ID, settings.B2_APPLICATION_KEY)
+        self.api.authorize_account("production", settings.B2_KEY_ID, settings.B2_APPLICATION_KEY)
         
-        # Get bucket directly since we're using a restricted key
+        # Get bucket
         self.bucket = self.api.get_bucket_by_name(settings.B2_BUCKET_NAME)
 
     async def upload_file(self, file: Union[BinaryIO, bytes], file_path: str) -> str:
@@ -81,11 +80,21 @@ class B2Service:
         try:
             # Get file info
             file_version = self.bucket.get_file_info_by_name(file_path)
-            # Generate download URL
-            return self.api.get_download_url_for_file_name(
+            
+            # Get download authorization
+            download_auth = self.bucket.get_download_authorization(
+                file_name_prefix=file_path,
+                valid_duration_in_seconds=duration_in_seconds
+            )
+            
+            # Generate download URL with authorization
+            url = self.api.get_download_url_for_file_name(
                 bucket_name=self.bucket.name,
                 file_name=file_path
             )
+            
+            # Add authorization to URL
+            return f"{url}?Authorization={download_auth}"
             
         except FileNotPresent:
             raise HTTPException(status_code=404, detail="File not found")

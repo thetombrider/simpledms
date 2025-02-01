@@ -3,16 +3,16 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    # API Settings
-    API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "SimpleS3DMS"
+    VERSION: str = "0.1.0"
+    API_V1_STR: str = "/api/v1"
     
-    # MongoDB Settings
-    MONGODB_URL: str
+    # MongoDB settings
+    MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "simpledms"
     
-    # Backblaze B2 Settings
-    B2_APPLICATION_KEY_ID: str
+    # B2 settings
+    B2_KEY_ID: str
     B2_APPLICATION_KEY: str
     B2_BUCKET_NAME: str
     
@@ -31,3 +31,5 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings() 
+
+settings = Settings() 
