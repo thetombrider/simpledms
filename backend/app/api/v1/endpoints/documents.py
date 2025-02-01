@@ -1,8 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, File, Form, UploadFile, Query, HTTPException
 from datetime import datetime
-from backend.models.document import Document
-from backend.services.b2_service import B2Service
+from pydantic import BaseModel
+from ....models.document import Document
+from ....services.b2 import B2Service
 
 router = APIRouter()
 b2_service = B2Service()

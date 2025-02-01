@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import get_settings
 from .core.database import init_db
-from .api.v1 import documents
+from .api.v1.endpoints import documents, config
 
 app = FastAPI(
     title="SimpleS3DMS API",
@@ -26,6 +26,12 @@ app.include_router(
     documents.router,
     prefix=f"{settings.API_V1_STR}/documents",
     tags=["documents"]
+)
+
+app.include_router(
+    config.router,
+    prefix=f"{settings.API_V1_STR}/config",
+    tags=["config"]
 )
 
 @app.on_event("startup")

@@ -105,9 +105,68 @@ class DocumentAPI:
                 params={"owner_id": owner_id}
             )
             response.raise_for_status()
+    
+    async def list_categories(self) -> List[Dict]:
+        """Get all available categories"""
+        async with await self._get_client() as client:
+            response = await client.get(f"{self.base_url}/config/categories/")
+            response.raise_for_status()
+            return response.json()
+    
+    async def create_category(self, name: str, icon: str, description: Optional[str] = None) -> Dict:
+        """Create a new category"""
+        async with await self._get_client() as client:
+            response = await client.post(
+                f"{self.base_url}/config/categories/",
+                json={"name": name, "icon": icon, "description": description}
+            )
+            response.raise_for_status()
+            return response.json()
+    
+    async def delete_category(self, name: str) -> None:
+        """Delete a category"""
+        async with await self._get_client() as client:
+            response = await client.delete(f"{self.base_url}/config/categories/{name}")
+            response.raise_for_status()
+    
+    async def list_tags(self) -> List[Dict]:
+        """Get all available tags"""
+        async with await self._get_client() as client:
+            response = await client.get(f"{self.base_url}/config/tags/")
+            response.raise_for_status()
+            return response.json()
+    
+    async def create_tag(self, name: str, color: str) -> Dict:
+        """Create a new tag"""
+        async with await self._get_client() as client:
+            response = await client.post(
+                f"{self.base_url}/config/tags/",
+                json={"name": name, "color": color}
+            )
+            response.raise_for_status()
+            return response.json()
+    
+    async def delete_tag(self, name: str) -> None:
+        """Delete a tag"""
+        async with await self._get_client() as client:
+            response = await client.delete(f"{self.base_url}/config/tags/{name}")
+            response.raise_for_status()
 
 # Initialize API client
 api = DocumentAPI(API_URL)
+
+# Cache for categories
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def get_categories():
+    """Get list of category names from the database"""
+    try:
+        categories = run_async_operation(api.list_categories)
+        if not categories:  # If no categories in DB, use defaults
+            return ["Invoice", "Contract", "Report", "Other"]
+        return [cat["name"] for cat in categories]
+    except Exception as e:
+        st.error(f"Error loading categories: {str(e)}")
+        return ["Invoice", "Contract", "Report", "Other"]  # Fallback only on error
 
 # Helper function to run async operations
 def run_async_operation(func, *args, **kwargs):
@@ -122,42 +181,33 @@ def run_async_operation(func, *args, **kwargs):
         loop.close()
         asyncio.set_event_loop(None)
 
-# Set page config
-st.set_page_config(
-    page_title="SimpleS3DMS",
-    page_icon="📄",
-    layout="wide"
-)
-
-# Title
-st.title("📄 SimpleS3DMS")
-st.subheader("Simple Document Management System")
-
-# Sidebar
-with st.sidebar:
-    st.header("Navigation")
-    page = st.radio("Go to", ["Upload", "Documents"])
-
-# Main content
-if page == "Upload":
+def show_upload_page():
+    """Upload page content"""
     st.header("Upload Document")
     
-    with st.form("upload_form"):
-        uploaded_file = st.file_uploader("Choose a file", type=None)
-        title = st.text_input("Title")
-        description = st.text_area("Description")
-        categories = st.multiselect(
-            "Categories",
-            ["Invoice", "Contract", "Report", "Other"],
-            default=[]
-        )
-        tags = st.text_input("Tags (comma-separated)").split(",")
-        tags = [tag.strip() for tag in tags if tag.strip()]
+    with st.form("upload_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
         
-        submit = st.form_submit_button("Upload")
+        with col1:
+            uploaded_file = st.file_uploader("Choose a file", type=None)
+            title = st.text_input("Title")
+            description = st.text_area("Description")
         
-        if submit and uploaded_file is not None:
-            if not title:
+        with col2:
+            categories = st.multiselect(
+                "Categories",
+                options=get_categories(),
+                default=[]
+            )
+            tags_input = st.text_input("Tags (comma-separated)")
+            tags = [tag.strip() for tag in tags_input.split(",") if tag.strip()]
+        
+        submit_button = st.form_submit_button("Upload Document", use_container_width=True)
+        
+        if submit_button:
+            if not uploaded_file:
+                st.error("Please select a file to upload")
+            elif not title:
                 st.error("Please provide a title")
             else:
                 with st.spinner("Uploading document..."):
@@ -176,7 +226,8 @@ if page == "Upload":
                     except Exception as e:
                         st.error(f"Error uploading document: {str(e)}")
 
-else:  # Documents page
+def show_documents_page():
+    """Documents page content"""
     st.header("My Documents")
     
     # Filters
@@ -184,7 +235,7 @@ else:  # Documents page
     with col1:
         filter_category = st.selectbox(
             "Filter by category",
-            ["All"] + ["Invoice", "Contract", "Report", "Other"]
+            ["All"] + get_categories()
         )
     with col2:
         filter_tag = st.text_input("Filter by tag")
@@ -263,4 +314,184 @@ else:  # Documents page
                                 st.rerun()
     
     except Exception as e:
-        st.error(f"Error loading documents: {str(e)}") 
+        st.error(f"Error loading documents: {str(e)}")
+
+def show_config_page():
+    """Configuration page content"""
+    st.header("Configuration")
+    
+    # Initialize session state for form submission tracking
+    if 'category_submitted' not in st.session_state:
+        st.session_state.category_submitted = False
+    if 'tag_submitted' not in st.session_state:
+        st.session_state.tag_submitted = False
+
+    # Categories Section
+    st.subheader("Categories")
+    
+    # Category form
+    with st.form("category_form", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            new_category_name = st.text_input("Category Name")
+            new_category_description = st.text_area("Description (optional)")
+        with col2:
+            new_category_icon = st.text_input("Icon", value="📄")
+        
+        submit_category = st.form_submit_button("Add Category", use_container_width=True)
+        
+        if submit_category and new_category_name:
+            try:
+                run_async_operation(
+                    lambda: api.create_category(
+                        name=new_category_name,
+                        icon=new_category_icon,
+                        description=new_category_description if new_category_description else None
+                    )
+                )
+                st.success(f"Category '{new_category_name}' added successfully!")
+                st.session_state.category_submitted = True
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error adding category: {str(e)}")
+    
+    # Display existing categories
+    try:
+        categories = run_async_operation(api.list_categories)
+        if categories:
+            st.subheader("Existing Categories")
+            for cat in categories:
+                with st.container():
+                    col1, col2, col3 = st.columns([1, 3, 1])
+                    with col1:
+                        st.write(cat["icon"])
+                    with col2:
+                        st.write(cat["name"])
+                        if cat.get("description"):
+                            st.caption(cat["description"])
+                    with col3:
+                        if st.button("Delete", key=f"del_cat_{cat['name']}", use_container_width=True):
+                            try:
+                                run_async_operation(
+                                    lambda: api.delete_category(cat['name'])
+                                )
+                                st.success(f"Category '{cat['name']}' deleted successfully!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error deleting category: {str(e)}")
+    except Exception as e:
+        st.error(f"Error loading categories: {str(e)}")
+
+    # Tags Section
+    st.subheader("Tags")
+    
+    # Tag form
+    with st.form("tag_form", clear_on_submit=True):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            new_tag_name = st.text_input("Tag Name")
+        with col2:
+            new_tag_color = st.color_picker("Color", value="#808080")
+        
+        submit_tag = st.form_submit_button("Add Tag", use_container_width=True)
+        
+        if submit_tag and new_tag_name:
+            try:
+                run_async_operation(
+                    lambda: api.create_tag(new_tag_name, new_tag_color)
+                )
+                st.success(f"Tag '{new_tag_name}' added successfully!")
+                st.session_state.tag_submitted = True
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error adding tag: {str(e)}")
+    
+    # Display existing tags
+    try:
+        tags = run_async_operation(api.list_tags)
+        if tags:
+            st.subheader("Existing Tags")
+            for tag in tags:
+                col1, col2, col3 = st.columns([1, 3, 1])
+                with col1:
+                    st.markdown(f"<div style='width: 20px; height: 20px; background-color: {tag['color']}; border-radius: 50%;'></div>", unsafe_allow_html=True)
+                with col2:
+                    st.write(tag["name"])
+                with col3:
+                    if st.button("Delete", key=f"del_tag_{tag['name']}", use_container_width=True):
+                        try:
+                            run_async_operation(
+                                lambda: api.delete_tag(tag['name'])
+                            )
+                            st.success(f"Tag '{tag['name']}' deleted successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error deleting tag: {str(e)}")
+    except Exception as e:
+        st.error(f"Error loading tags: {str(e)}")
+
+# Set page config
+st.set_page_config(
+    page_title="SimpleS3DMS",
+    page_icon="📄",
+    layout="wide"
+)
+
+# Title
+st.title("📄 SimpleS3DMS")
+st.subheader("Simple Document Management System")
+
+# Initialize page in session state if not exists
+if "page" not in st.session_state:
+    st.session_state.page = "upload"
+
+# Sidebar Navigation
+with st.sidebar:
+    st.header("Navigation")
+    # Navigation styling
+    st.markdown("""
+        <style>
+        .nav-link {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f0f2f6;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .nav-link:hover {
+            background-color: #e0e2e6;
+        }
+        .nav-selected {
+            background-color: #e0e2e6;
+            border-left: 4px solid #ff4b4b;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Create navigation options with icons
+    if st.button("📤 Upload", key="nav_upload", 
+        use_container_width=True,
+        help="Upload new documents"):
+        st.session_state.page = "upload"
+        st.rerun()
+    
+    if st.button("📋 Documents", key="nav_docs",
+        use_container_width=True,
+        help="View and manage documents"):
+        st.session_state.page = "documents"
+        st.rerun()
+        
+    if st.button("⚙️ Configuration", key="nav_config",
+        use_container_width=True,
+        help="Manage categories and tags"):
+        st.session_state.page = "config"
+        st.rerun()
+
+# Show the selected page
+if st.session_state.page == "upload":
+    show_upload_page()
+elif st.session_state.page == "documents":
+    show_documents_page()
+elif st.session_state.page == "config":
+    show_config_page() 
