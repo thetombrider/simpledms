@@ -8,6 +8,10 @@ from ....services.b2 import B2Service
 router = APIRouter()
 b2_service = B2Service()
 
+class BatchDeleteRequest(BaseModel):
+    document_ids: List[str]
+    owner_id: str
+
 @router.get("/")
 async def list_documents(
     owner_id: str,
@@ -24,6 +28,78 @@ async def list_documents(
         query["tags"] = tag
     
     return await Document.find(query).skip(skip).limit(limit).to_list()
+
+@router.post("/batch")
+async def create_documents(
+    files: List[UploadFile] = File(...),
+    title_prefix: str = Form(...),
+    description: Optional[str] = Form(None),
+    categories: List[str] = Form([]),
+    tags: List[str] = Form([]),
+    owner_id: str = Form(...)
+) -> List[Document]:
+    """Create multiple documents in one request"""
+    documents = []
+    
+    for i, file in enumerate(files):
+        # Read file content
+        file_content = await file.read()
+        file_size = len(file_content)
+        
+        # Generate S3 key (path in B2)
+        current_time = datetime.utcnow()
+        file_path = f"documents/{owner_id}/{current_time.year}/{current_time.month:02d}/{current_time.day:02d}/{file.filename}"
+        
+        # Create document metadata
+        document = Document(
+            title=f"{title_prefix} {i+1}" if len(files) > 1 else title_prefix,
+            description=description,
+            file_name=file.filename,
+            file_size=file_size,
+            mime_type=file.content_type or "application/octet-stream",
+            s3_key=file_path,
+            categories=categories,
+            tags=tags,
+            owner_id=owner_id
+        )
+        
+        # Upload file to B2
+        await b2_service.upload_file(file_content, file_path)
+        
+        # Save document metadata
+        await document.insert()
+        documents.append(document)
+    
+    return documents
+
+@router.delete("/batch")
+async def delete_documents(request: BatchDeleteRequest):
+    """Delete multiple documents in one request"""
+    deleted_count = 0
+    errors = []
+    
+    for doc_id in request.document_ids:
+        try:
+            document = await Document.get(doc_id)
+            if not document or document.owner_id != request.owner_id:
+                errors.append(f"Document {doc_id} not found or access denied")
+                continue
+            
+            # Delete from B2
+            await b2_service.delete_file(document.s3_key)
+            
+            # Delete metadata
+            await document.delete()
+            deleted_count += 1
+            
+        except Exception as e:
+            errors.append(f"Error deleting document {doc_id}: {str(e)}")
+    
+    return {
+        "success": deleted_count,
+        "total": len(request.document_ids),
+        "errors": errors if errors else None
+    }
 
 @router.post("/")
 async def create_document(

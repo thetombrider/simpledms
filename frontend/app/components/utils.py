@@ -1,5 +1,8 @@
 import asyncio
 import streamlit as st
+import re
+from pathlib import Path
+from typing import List
 
 # Constants
 API_URL = "http://localhost:8080/api/v1"  # Updated port to match backend
@@ -61,20 +64,18 @@ def invalidate_tags_cache():
     st.session_state.tags_cache_version += 1
 
 # Cache decorators
-@st.cache_data(ttl=3600)  # Cache for 1 hour
-def get_categories(cache_version: int, _api):
+@st.cache_data(ttl=60)  # Reduced cache time to 1 minute for more frequent updates
+def get_categories(cache_version: int, _api) -> List[str]:
     """Get list of category names from the database"""
     try:
         categories = run_async_operation(_api.list_categories)
-        if not categories:  # If no categories in DB, use defaults
-            return ["Invoice", "Contract", "Report", "Other"]
-        return [cat["name"] for cat in categories]
+        return [cat["name"] for cat in categories] if categories else ["Invoice", "Contract", "Report", "Other"]
     except Exception as e:
         st.error(f"Error loading categories: {str(e)}")
-        return ["Invoice", "Contract", "Report", "Other"]  # Fallback only on error
+        return ["Invoice", "Contract", "Report", "Other"]
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
-def get_tags(cache_version: int, _api):
+@st.cache_data(ttl=60)  # Reduced cache time to 1 minute for more frequent updates
+def get_tags(cache_version: int, _api) -> List[str]:
     """Get list of tag names from the database"""
     try:
         tags = run_async_operation(_api.list_tags)
@@ -82,3 +83,19 @@ def get_tags(cache_version: int, _api):
     except Exception as e:
         st.error(f"Error loading tags: {str(e)}")
         return []
+
+def generate_title_from_filename(filename: str) -> str:
+    """Generate a clean title from a filename"""
+    # Remove file extension
+    title = Path(filename).stem
+    
+    # Replace underscores and hyphens with spaces
+    title = title.replace('_', ' ').replace('-', ' ')
+    
+    # Remove any special characters except spaces
+    title = re.sub(r'[^a-zA-Z0-9\s]', '', title)
+    
+    # Convert to title case and strip extra spaces
+    title = ' '.join(word.capitalize() for word in title.split())
+    
+    return title

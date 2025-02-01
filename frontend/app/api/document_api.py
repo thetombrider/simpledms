@@ -1,11 +1,13 @@
 import httpx
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any, BinaryIO
 from datetime import datetime
+import json
 
 class DocumentAPI:
     """API client for interacting with the backend"""
     def __init__(self, base_url: str):
         self.base_url = base_url
+        self.client = httpx.AsyncClient(timeout=30.0)  # Increased timeout for uploads
     
     async def _get_client(self):
         return httpx.AsyncClient(timeout=30.0)
@@ -196,4 +198,46 @@ class DocumentAPI:
                 "documents_by_month": dict(sorted(docs_by_month.items())),
                 "most_used_category": max(categories_count.items(), key=lambda x: x[1])[0] if categories_count else None,
                 "most_used_tag": max(tags_count.items(), key=lambda x: x[1])[0] if tags_count else None
-            } 
+            }
+
+    async def upload_documents(
+        self,
+        files: List[BinaryIO],
+        title_prefix: str,
+        description: Optional[str] = None,
+        categories: List[str] = None,
+        tags: List[str] = None,
+        owner_id: str = None
+    ) -> List[Dict[str, Any]]:
+        """Upload multiple documents"""
+        url = f"{self.base_url}/documents/batch"
+        
+        # Prepare form data
+        form = {
+            "title_prefix": title_prefix,
+            "owner_id": owner_id,
+        }
+        if description:
+            form["description"] = description
+        if categories:
+            form["categories"] = categories
+        if tags:
+            form["tags"] = tags
+            
+        # Prepare files
+        files_data = [("files", (f.name, f, "application/octet-stream")) for f in files]
+        
+        response = await self.client.post(url, data=form, files=files_data)
+        response.raise_for_status()
+        return response.json()
+
+    async def delete_documents(self, document_ids: List[str], owner_id: str) -> Dict[str, Any]:
+        """Delete multiple documents"""
+        url = f"{self.base_url}/documents/batch"
+        data = {
+            "document_ids": document_ids,
+            "owner_id": owner_id
+        }
+        response = await self.client.delete(url, json=data)
+        response.raise_for_status()
+        return response.json() 
