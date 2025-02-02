@@ -1,12 +1,15 @@
 # SimpleS3DMS Development Roadmap
 
-## Current Version (0.1.0)
+## Current Version (0.1.1)
 - ✅ Basic document upload and management
 - ✅ Category and tag system
 - ✅ B2 storage integration
 - ✅ MongoDB database
 - ✅ Frontend with Streamlit
 - ✅ Backend with FastAPI
+- ✅ AI-powered document analysis (using Claude)
+- ✅ Document title and description suggestions
+- ✅ Batch operations (upload, delete)
 
 ## Next Up (0.2.0)
 - [ ] User authentication system
@@ -14,7 +17,6 @@
 - [ ] Document sharing capabilities
 - [ ] Search functionality
 - [ ] Document preview
-- [ ] Batch operations (upload, delete)
 
 ## Future Plans (0.3.0+)
 ### Version 0.3.0
@@ -40,5 +42,4 @@
 - [ ] Desktop sync client
 - [ ] Browser extension
 - [ ] Document collaboration features
-- [ ] AI-powered document analysis
 - [ ] Custom themes 
