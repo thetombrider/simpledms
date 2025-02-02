@@ -1,57 +1,95 @@
 # SimpleS3DMS
 
-A Simple Document Management System built with FastAPI and Streamlit.
+A Simple Document Management System using FastAPI, Streamlit, and B2 Cloud Storage.
 
 ## Features
-- Document upload and management
-- Category and tag organization
-- B2 storage integration
-- MongoDB database
-- Modern web interface
-- RESTful API
 
-## Prerequisites
-- Python 3.8+
-- MongoDB
-- Backblaze B2 account
+- 📄 Document Upload and Management
+  - Support for PDF, DOCX, PPTX files
+  - Automatic metadata extraction
+  - Categories and tags organization
+  - File preview (coming soon)
+
+- 🤖 AI-Powered Features
+  - Automatic document categorization
+  - Smart tag suggestions
+  - Description generation
+  - OCR capabilities (coming soon)
+
+- 🔗 Document Sharing
+  - Secure share links with expiration
+  - URL shortening via is.gd
+  - Share management and tracking
+  - Automatic cleanup of expired shares
+
+- 🔒 Security
+  - Secure B2 Cloud Storage integration
+  - Document access control
+  - Share link expiration
+  - User-based permissions
 
 ## Quick Start
 
-1. Clone the repository:
+1. Clone the repository
+2. Install dependencies:
 ```bash
-git clone https://github.com/yourusername/simpledms.git
-cd simpledms
+pip install -r requirements.txt
 ```
 
-2. Set up environment variables in `.env`:
+3. Set up environment variables in `.env`:
 ```env
 # MongoDB Settings
 MONGODB_URL=mongodb://localhost:27017
 MONGODB_DB_NAME=simpledms
 
-# B2 Settings
+# Backblaze B2 Settings
 B2_KEY_ID=your_key_id
-B2_APPLICATION_KEY=your_application_key
-B2_BUCKET_NAME=your_bucket_name
+B2_APPLICATION_KEY=your_app_key
+B2_BUCKET_NAME=your_bucket
+
+# API Settings
+PROJECT_NAME=SimpleS3DMS
+VERSION=0.1.1
+API_V1_STR=/api/v1
+
+# AI Settings (Optional)
+ANTHROPIC_API_KEY=your_key  # For AI features
 ```
 
-3. Start the application:
+4. Run the backend:
 ```bash
-./start.sh
+cd backend
+uvicorn app.main:app --reload --port 8080
 ```
 
-The script will:
-- Start MongoDB service
-- Create and activate virtual environment
-- Install dependencies
-- Start backend (FastAPI) on port 8080
-- Start frontend (Streamlit) on port 8501
+5. Run the frontend:
+```bash
+cd frontend
+streamlit run main.py
+```
 
-Access the application at:
-- Frontend: http://localhost:8501
-- Backend API: http://localhost:8080
+## Development Status
 
-To stop all services, press Ctrl+C in the terminal running the start script.
+Current Version: 0.1.1
+
+### Completed Features (v0.1.1)
+- ✅ Basic document upload and management
+- ✅ B2 Cloud Storage integration
+- ✅ Categories and tags system
+- ✅ AI-powered document analysis
+- ✅ Document sharing with expiration
+- ✅ URL shortening integration
+- ✅ Background cleanup of expired shares
+
+### Coming Soon (v0.2.0)
+- 🔄 Document OCR
+- 🔄 Document preview
+- 🔄 Document versioning
+- 🔄 Enhanced search functionality
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Manual Setup
 
@@ -92,49 +130,4 @@ See [ROADMAP.md](Roadmap.md) for planned features and improvements.
 ## License
 
 MIT License - see LICENSE file for details.
-
-## Technical Architecture
-
-### Frontend Structure
-```
-frontend/
-├── main.py                 # Application entry point
-└── app/                    # Main application package
-    ├── api/               # API client code
-    │   └── document_api.py # API client implementation
-    ├── components/        # Reusable components
-    │   ├── navigation.py  # Navigation menu
-    │   └── utils.py      # Shared utilities and constants
-    └── pages/            # Page implementations
-        ├── upload.py     # Document upload page
-        ├── documents.py  # Document list/management page
-        ├── config.py     # Categories/tags configuration
-        └── user.py       # User dashboard page
-```
-
-### Backend Structure
-```
-simpledms/                # Root project directory
-├── backend/             # Backend application
-│   ├── main.py         # FastAPI application entry point
-│   └── app/            # Main application package
-│       ├── api/        # API endpoints
-│       │   └── v1/     # API version 1
-│       │       ├── documents.py    # Document endpoints
-│       │       ├── categories.py   # Category endpoints
-│       │       └── tags.py        # Tag endpoints
-│       ├── models/     # Data models
-│       │   ├── document.py   # Document model
-│       │   ├── category.py   # Category model
-│       │   └── tag.py       # Tag model
-│       └── services/   # Business logic
-│           ├── storage.py    # B2 storage service
-│           ├── document.py   # Document service
-│           └── config.py     # Configuration service
-├── frontend/          # Frontend application (structure as above)
-├── docs/             # Documentation
-│   ├── README.md     # User documentation
-│   └── DEVELOPMENT.md # Developer documentation
-├── requirements.txt  # Project dependencies
-└── README.md        # Project overview
 ``` 

@@ -2,6 +2,42 @@
 
 This document provides technical details for developers working on the SimpleS3DMS project.
 
+## Architecture Overview
+
+### Backend (FastAPI)
+- RESTful API with FastAPI
+- MongoDB with Beanie ODM
+- B2 Cloud Storage integration
+- Background tasks for maintenance
+- AI integration with Claude
+
+### Frontend (Streamlit)
+- Modern web interface
+- Responsive design
+- Real-time updates
+- Client-side caching
+- Async operations
+
+## Core Components
+
+### Document Management
+- File upload handling
+- Metadata extraction
+- B2 storage integration
+- Category and tag management
+
+### AI Integration
+- Document analysis
+- Category suggestions
+- Tag recommendations
+- Description generation
+
+### Share System
+- Share link generation
+- URL shortening via is.gd
+- Expiration handling
+- Background cleanup
+
 ## Development Environment Setup
 
 ### Prerequisites
@@ -19,72 +55,132 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 2. Install development dependencies:
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
+```
+
+3. Set up environment variables in `.env`
+
+4. Start services:
+```bash
+# Terminal 1 - Backend
+cd backend
+uvicorn app.main:app --reload --port 8080
+
+# Terminal 2 - Frontend
+cd frontend
+streamlit run main.py
 ```
 
 ## Code Organization
 
-### Frontend Architecture
-
-#### State Management
-- Uses Streamlit's session state for managing application state
-- Cache versioning for categories and tags
-- Page navigation state
-
-#### Caching System
-```python
-# Cache version management in session state
-if 'categories_cache_version' not in st.session_state:
-    st.session_state.categories_cache_version = 0
-if 'tags_cache_version' not in st.session_state:
-    st.session_state.tags_cache_version = 0
-
-# Cache decorators with version invalidation
-@st.cache_data(ttl=3600)
-def get_categories(cache_version: int, _api):
-    # Cache is invalidated when cache_version changes
-    ...
+### Backend Structure
+```
+backend/
+├── app/
+│   ├── api/
+│   │   └── v1/
+│   │       └── endpoints/
+│   │   ├── core/
+│   │   └── tasks.py
+│   │   └── models/
+│   │   └── services/
+│   │   └── main.py
 ```
 
-#### Async Operations
-The frontend uses a custom async operation handler:
+### Frontend Structure
+```
+frontend/
+├── app/
+│   ├── api/
+│   ├── components/
+│   ├── pages/
+│   └── utils/
+└── main.py
+```
+
+## Key Features Implementation
+
+### Document Sharing
 ```python
-def run_async_operation(func, *args, **kwargs):
-    """Helper function to run async operations"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# Share creation with URL shortening
+async def create_share(document_id: str, owner_id: str, expires_in_days: int) -> Share:
+    # Generate B2 download URL
+    long_url = await b2_service.generate_download_url(...)
+    
+    # Create short URL
     try:
-        result = loop.run_until_complete(func(*args, **kwargs))
-        return result
-    finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+        short_url = shortener.isgd.short(long_url)
+    except:
+        short_url = long_url  # Fallback to long URL
+    
+    # Create and save share record
+    share = Share(
+        document_id=doc_id,
+        owner_id=owner_id,
+        short_url=short_url,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days)
+    )
+    await share.insert()
+    return share
 ```
 
-### Component Structure
+### Background Tasks
+```python
+# Cleanup expired shares
+async def cleanup_expired_shares():
+    while True:
+        try:
+            await Share.find(
+                Share.expires_at < datetime.now(timezone.utc)
+            ).delete()
+            await asyncio.sleep(3600)  # Run every hour
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")
+```
 
-#### API Client
-- Handles all HTTP communication with backend
-- Implements retry logic and error handling
-- Manages file uploads and downloads
+## Testing
 
-#### Navigation
-- Sidebar-based navigation
-- Form-based buttons to prevent Streamlit rerun issues
-- Page state management
+### Running Tests
+```bash
+pytest backend/tests/
+```
 
-#### Utilities
-- Shared constants
-- Cache management
-- File size formatting
-- Async operation handling
+### Test Coverage
+```bash
+pytest --cov=app backend/tests/
+```
 
-#### Pages
-Each page is a self-contained module with:
-- Clear responsibility
-- Own state management
-- Error handling
-- Loading states
+## Deployment
+
+### Production Setup
+1. Set up MongoDB
+2. Configure B2 bucket
+3. Set environment variables
+4. Deploy using Docker or your preferred method
+
+### Environment Variables
+Required environment variables for production:
+```env
+MONGODB_URL=
+MONGODB_DB_NAME=
+B2_KEY_ID=
+B2_APPLICATION_KEY=
+B2_BUCKET_NAME=
+ANTHROPIC_API_KEY=  # For AI features
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+Please ensure:
+- Code follows project style
+- Tests are included
+- Documentation is updated
+- Commit messages are clear
 
 ## Key Implementation Details
 
@@ -136,19 +232,6 @@ async def api_call():
         raise  # Propagate to frontend
 ```
 
-## Testing
-
-### Manual Testing Checklist
-- [ ] Document upload with various file types
-- [ ] Category creation and deletion
-- [ ] Tag creation and deletion
-- [ ] Document filtering
-- [ ] Download functionality
-- [ ] Delete confirmation flow
-- [ ] Cache invalidation
-- [ ] Error handling
-- [ ] Responsive layout
-
 ## Development Guidelines
 
 ### Code Style
@@ -173,28 +256,6 @@ async def api_call():
 3. Missing error states
 4. Not resetting state after operations
 5. Streamlit rerun issues
-
-## Deployment
-
-### Development
-```bash
-streamlit run frontend/main.py
-```
-
-### Production
-1. Set up environment variables
-2. Configure MongoDB
-3. Set up B2 bucket
-4. Deploy backend (FastAPI)
-5. Deploy frontend (Streamlit)
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes
-4. Run tests
-5. Submit pull request
 
 ## Troubleshooting
 
