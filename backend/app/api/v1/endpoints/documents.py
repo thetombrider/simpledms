@@ -105,10 +105,10 @@ async def delete_documents(request: BatchDeleteRequest):
 @router.post("/")
 async def create_document(
     file: UploadFile = File(...),
-    title: str = Form(...),
+    title_prefix: str = Form(...),
     description: Optional[str] = Form(None),
-    categories: List[str] = Form([]),  # Accept as list directly
-    tags: List[str] = Form([]),  # Accept as list directly
+    categories: List[str] = Form([]),
+    tags: List[str] = Form([]),
     owner_id: str = Form(...)
 ) -> Document:
     """Create a new document"""
@@ -122,7 +122,7 @@ async def create_document(
     
     # Create document metadata
     document = Document(
-        title=title,
+        title=title_prefix,
         description=description,
         file_name=file.filename,
         file_size=file_size,

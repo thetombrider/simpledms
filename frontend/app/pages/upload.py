@@ -95,9 +95,9 @@ def show_upload_page(api):
             with col1:
                 # Use suggested title as default if available
                 title_prefix = st.text_input(
-                    "Title Prefix",
+                    "Document Title",
                     value=st.session_state.suggested_title,
-                    help="For multiple files, this will be used as prefix followed by a number"
+                    help="Enter the document title. For multiple files, this will be used as prefix followed by a number (e.g. 'Invoice' becomes 'Invoice 1', 'Invoice 2', etc.)"
                 )
                 description = st.text_area(
                     "Description",
