@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, File, Form, UploadFile, Query, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
 from ....models.document import Document
 from ....services.b2 import B2Service
+from ....services.ai_analysis import AIAnalysisService
 
 router = APIRouter()
 b2_service = B2Service()
@@ -161,4 +162,41 @@ async def delete_document(document_id: str, owner_id: str):
     
     # Delete metadata
     await document.delete()
-    return {"status": "success"} 
+    return {"status": "success"}
+
+@router.post("/analyze")
+async def analyze_document(
+    file: UploadFile = File(...),
+) -> Dict:
+    """Analyze a document and return AI-generated suggestions"""
+    try:
+        # Initialize AI service only when needed
+        ai_service = AIAnalysisService()
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Get suggestions
+        suggestions = await ai_service.get_suggestions(
+            file_content,
+            file.content_type or "application/octet-stream"
+        )
+        
+        # Get summary
+        summary = await ai_service.get_summary(
+            file_content,
+            file.content_type or "application/octet-stream"
+        )
+        
+        return {
+            "summary": summary,
+            "categories": suggestions["categories"],
+            "tags": suggestions["tags"]
+        }
+    except ValueError as e:
+        if "OPENAI_API_KEY" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail="OpenAI API is not configured. Please add OPENAI_API_KEY to your environment variables."
+            )
+        raise HTTPException(status_code=400, detail=str(e)) 

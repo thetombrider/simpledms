@@ -240,4 +240,20 @@ class DocumentAPI:
         }
         response = await self.client.delete(url, json=data)
         response.raise_for_status()
-        return response.json() 
+        return response.json()
+
+    async def analyze_document(self, file) -> Dict[str, Any]:
+        """Get AI-generated suggestions for a document"""
+        try:
+            url = f"{self.base_url}/documents/analyze"
+            
+            async with await self._get_client() as client:
+                response = await client.post(
+                    url,
+                    files={"file": file}
+                )
+                response.raise_for_status()
+                return response.json()
+                
+        except Exception as e:
+            raise ValueError(f"Error analyzing document: {str(e)}") 

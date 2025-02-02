@@ -1,14 +1,22 @@
 from typing import Dict, List, Tuple
-import openai
+from openai import AsyncOpenAI
 from ..core.config import settings
 import PyPDF2
-import docx
 import io
 import mimetypes
+from docx.api import Document
 
 class AIAnalysisService:
     def __init__(self):
-        openai.api_key = settings.OPENAI_API_KEY
+        self.api_key = settings.OPENAI_API_KEY
+        self.is_available = bool(self.api_key)
+        if self.is_available:
+            self.client = AsyncOpenAI(api_key=self.api_key)
+    
+    def _check_api_key(self):
+        """Check if OpenAI API key is configured"""
+        if not self.is_available:
+            raise ValueError("OpenAI integration is not available - OPENAI_API_KEY not configured")
     
     async def extract_text(self, file_content: bytes, mime_type: str) -> str:
         """Extract text content from various file types"""
@@ -24,7 +32,7 @@ class AIAnalysisService:
             
             elif mime_type in ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
                 # Handle Word documents
-                doc = docx.Document(io.BytesIO(file_content))
+                doc = Document(io.BytesIO(file_content))
                 return "\n".join([paragraph.text for paragraph in doc.paragraphs])
             
             elif mime_type.startswith("text/"):
@@ -44,6 +52,8 @@ class AIAnalysisService:
         - Suggested categories
         - Suggested tags
         """
+        self._check_api_key()
+        
         # Extract text from document
         text = await self.extract_text(file_content, mime_type)
         
@@ -69,7 +79,7 @@ Format your response as JSON:
 }}"""
 
         # Get AI analysis
-        response = await openai.ChatCompletion.acreate(
+        response = await self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a document analysis assistant. Provide concise, relevant analysis."},

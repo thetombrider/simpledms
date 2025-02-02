@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     B2_KEY_ID: str
     B2_APPLICATION_KEY: str
     B2_BUCKET_NAME: str
+    
+    # OpenAI settings
+    OPENAI_API_KEY: Optional[str] = None
     
     # JWT Settings
     SECRET_KEY: str
