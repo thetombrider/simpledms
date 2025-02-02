@@ -60,6 +60,20 @@ class DocumentService:
         document = await Document.get(document_id)
         if not document or document.owner_id != owner_id:
             raise HTTPException(status_code=404, detail="Document not found")
+        
+        try:
+            # Verify file exists in B2
+            await self.b2_service.get_file_info(document.s3_key)
+        except HTTPException as e:
+            if e.status_code == 404:
+                # File doesn't exist in B2, clean up orphaned metadata
+                await document.delete()
+                raise HTTPException(
+                    status_code=404,
+                    detail="Document not found in storage. Metadata has been cleaned up."
+                )
+            raise
+        
         return document
 
     async def list_documents(
@@ -78,8 +92,26 @@ class DocumentService:
         if tag:
             query = query.find(Document.tags == tag)
             
-        documents = await query.skip(skip).limit(limit).to_list()
-        return documents
+        documents = await query.to_list()
+        valid_documents = []
+        
+        # Check each document's file existence and clean up orphaned ones
+        for doc in documents:
+            try:
+                await self.b2_service.get_file_info(doc.s3_key)
+                valid_documents.append(doc)
+            except HTTPException as e:
+                if e.status_code == 404:
+                    # File doesn't exist in B2, delete the orphaned metadata
+                    await doc.delete()
+                else:
+                    # For other errors, keep the document in the list
+                    valid_documents.append(doc)
+        
+        # Apply skip and limit after filtering
+        start = min(skip, len(valid_documents))
+        end = min(start + limit, len(valid_documents))
+        return valid_documents[start:end]
 
     async def delete_document(self, document_id: str, owner_id: str) -> None:
         """Delete a document"""

@@ -78,28 +78,54 @@ class B2Service:
     async def generate_download_url(self, file_path: str, duration_in_seconds: int = 3600) -> str:
         """Generate a download URL for a file"""
         try:
+            # Clean the file path (remove any brackets or extra formatting)
+            clean_path = file_path.strip('[]')
+            
             # Get file info
-            file_version = self.bucket.get_file_info_by_name(file_path)
+            file_version = self.bucket.get_file_info_by_name(clean_path)
             
             # Get download authorization
             download_auth = self.bucket.get_download_authorization(
-                file_name_prefix=file_path,
+                file_name_prefix=clean_path,
                 valid_duration_in_seconds=duration_in_seconds
             )
             
             # Generate download URL with authorization
             url = self.api.get_download_url_for_file_name(
                 bucket_name=self.bucket.name,
-                file_name=file_path
+                file_name=clean_path
             )
             
             # Add authorization to URL
             return f"{url}?Authorization={download_auth}"
             
         except FileNotPresent:
-            raise HTTPException(status_code=404, detail="File not found")
+            raise HTTPException(status_code=404, detail=f"File not found: {clean_path}")
         except B2Error as e:
             raise HTTPException(
                 status_code=500,
                 detail=f"Error generating download URL: {str(e)}"
+            )
+
+    async def get_file_info(self, file_path: str) -> dict:
+        """Get file info from B2"""
+        try:
+            # Clean the file path
+            clean_path = file_path.strip('[]')
+            
+            # Get file info
+            file_version = self.bucket.get_file_info_by_name(clean_path)
+            return {
+                "file_name": file_version.file_name,
+                "content_type": file_version.content_type,
+                "content_length": file_version.content_length,
+                "upload_timestamp": file_version.upload_timestamp
+            }
+            
+        except FileNotPresent:
+            raise HTTPException(status_code=404, detail=f"File not found: {clean_path}")
+        except B2Error as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error getting file info: {str(e)}"
             ) 
