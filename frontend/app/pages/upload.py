@@ -107,10 +107,17 @@ def show_upload_page(api):
             
             with col2:
                 # Get categories with cache version
+                available_categories = get_categories(st.session_state.categories_cache_version, api)
+                # Filter suggested categories to only include available ones
+                filtered_suggested_categories = [
+                    cat for cat in st.session_state.suggested_categories 
+                    if cat in available_categories
+                ]
+                
                 categories = st.multiselect(
                     "Categories",
-                    options=get_categories(st.session_state.categories_cache_version, api),
-                    default=st.session_state.suggested_categories,
+                    options=available_categories,
+                    default=filtered_suggested_categories,
                     help="AI-suggested categories will be pre-selected when available"
                 )
                 
@@ -135,7 +142,8 @@ def show_upload_page(api):
                 
                 with tag_col2:
                     # Add new tag button
-                    if st.form_submit_button("Add Tag", use_container_width=True):
+                    add_tag = st.form_submit_button("Add Tag", use_container_width=True)
+                    if add_tag:
                         if new_tag and new_tag not in tags and new_tag not in existing_tags:
                             try:
                                 # Create the new tag in the database
@@ -150,9 +158,10 @@ def show_upload_page(api):
                             except Exception as e:
                                 st.error(f"Error creating new tag '{new_tag}': {str(e)}")
             
-            submit_button = st.form_submit_button("Upload Documents", use_container_width=True)
+            # Main form submit button
+            submit = st.form_submit_button("Upload Documents", use_container_width=True)
             
-            if submit_button:
+            if submit:
                 if not uploaded_files:
                     st.error("Please select at least one file to upload")
                 elif not title_prefix:

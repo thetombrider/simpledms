@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # MongoDB settings
-    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_URL: str
     MONGODB_DB_NAME: str = "simpledms"
     ENVIRONMENT: str = "development"
     
@@ -37,6 +37,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8501",
         "http://127.0.0.1:8080",
     ]
+    
+    # AI settings
+    ANTHROPIC_API_KEY: Optional[str] = None
     
     class Config:
         env_file = ROOT_DIR / ".env"
