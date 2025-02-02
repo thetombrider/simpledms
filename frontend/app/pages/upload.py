@@ -190,9 +190,15 @@ def show_upload_page(api):
                             st.session_state.current_tags = []
                             st.session_state.suggested_title = ""
                             st.session_state.last_files = None
+                            st.session_state.suggested_description = ""
+                            st.session_state.suggested_categories = []
+                            st.session_state.suggested_tags = []
+                            st.session_state.new_tag_input = ""
                             # Force cache refresh after upload
                             invalidate_categories_cache()
                             invalidate_tags_cache()
+                            # Clear the file uploader
+                            st.rerun()
                         except Exception as e:
                             st.error(f"Error uploading documents: {str(e)}")
     except Exception as e:

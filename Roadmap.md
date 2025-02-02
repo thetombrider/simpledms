@@ -12,18 +12,19 @@
 - ✅ Batch operations (upload, delete)
 
 ## Next Up (0.2.0)
-- [ ] User authentication system
-- [ ] Multi-user support
-- [ ] Document sharing capabilities
+- [ ] Document OCR
+- [ ] Document sharing capabilities with url shortener
 - [ ] Search functionality
 - [ ] Document preview
+- [ ] Document versioning
 
 ## Future Plans (0.3.0+)
 ### Version 0.3.0
-- [ ] Document versioning
+- [ ] Document collaboration features
 - [ ] Advanced search with filters
-- [ ] Document OCR
 - [ ] Custom metadata fields
+- [ ] User authentication system
+- [ ] Multi-user support
 
 ### Version 0.4.0
 - [ ] Team workspaces
@@ -41,5 +42,4 @@
 - [ ] Mobile app
 - [ ] Desktop sync client
 - [ ] Browser extension
-- [ ] Document collaboration features
 - [ ] Custom themes 
