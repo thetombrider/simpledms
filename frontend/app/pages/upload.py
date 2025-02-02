@@ -24,6 +24,12 @@ def show_upload_page(api):
             st.session_state.suggested_title = ""
         if 'last_files' not in st.session_state:
             st.session_state.last_files = None
+        if 'suggested_description' not in st.session_state:
+            st.session_state.suggested_description = ""
+        if 'suggested_categories' not in st.session_state:
+            st.session_state.suggested_categories = []
+        if 'suggested_tags' not in st.session_state:
+            st.session_state.suggested_tags = []
         
         # Force cache refresh on page load
         if 'last_refresh' not in st.session_state:
@@ -46,27 +52,6 @@ def show_upload_page(api):
                 st.session_state.suggested_title = ""
             elif len(uploaded_files) == 1:
                 st.session_state.suggested_title = generate_title_from_filename(uploaded_files[0].name)
-                
-                # Add AI analysis button instead of automatic analysis
-                if st.button("Analyze Document with AI"):
-                    with st.spinner("Analyzing document..."):
-                        try:
-                            analysis = run_async_operation(
-                                api.analyze_document,
-                                uploaded_files[0]
-                            )
-                            st.session_state.suggested_description = analysis["summary"]
-                            st.session_state.suggested_categories = analysis["categories"]
-                            st.session_state.suggested_tags = analysis["tags"]
-                            st.success("Document analyzed successfully!")
-                        except ValueError as e:
-                            if "OPENAI_API_KEY" in str(e):
-                                st.error("OpenAI API key not configured. Please add it to your .env file.")
-                            else:
-                                st.error(f"Could not analyze document: {str(e)}")
-                            st.session_state.suggested_description = ""
-                            st.session_state.suggested_categories = []
-                            st.session_state.suggested_tags = []
             else:
                 # For multiple files, find common prefix
                 filenames = [generate_title_from_filename(f.name) for f in uploaded_files]
@@ -81,11 +66,28 @@ def show_upload_page(api):
                     # If no common words, use date-based prefix
                     from datetime import datetime
                     st.session_state.suggested_title = f"Documents {datetime.now().strftime('%Y-%m-%d')}"
-                
-                # Clear suggestions for multiple files
-                st.session_state.suggested_description = ""
-                st.session_state.suggested_categories = []
-                st.session_state.suggested_tags = []
+        
+        # AI Analysis section (outside form)
+        if uploaded_files and len(uploaded_files) == 1:
+            if st.button("Analyze Document with AI", key="analyze_button"):
+                with st.spinner("Analyzing document..."):
+                    try:
+                        analysis = run_async_operation(
+                            api.analyze_document,
+                            uploaded_files[0]
+                        )
+                        st.session_state.suggested_description = analysis["summary"]
+                        st.session_state.suggested_categories = analysis["categories"]
+                        st.session_state.suggested_tags = analysis["tags"]
+                        st.success("Document analyzed successfully!")
+                    except ValueError as e:
+                        if "OPENAI_API_KEY" in str(e):
+                            st.error("OpenAI API key not configured. Please add it to your .env file.")
+                        else:
+                            st.error(f"Could not analyze document: {str(e)}")
+                        st.session_state.suggested_description = ""
+                        st.session_state.suggested_categories = []
+                        st.session_state.suggested_tags = []
         
         with st.form("upload_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -99,7 +101,7 @@ def show_upload_page(api):
                 )
                 description = st.text_area(
                     "Description",
-                    value=getattr(st.session_state, 'suggested_description', ''),
+                    value=st.session_state.suggested_description,
                     help="AI-generated description will be suggested when available"
                 )
             
@@ -108,13 +110,13 @@ def show_upload_page(api):
                 categories = st.multiselect(
                     "Categories",
                     options=get_categories(st.session_state.categories_cache_version, api),
-                    default=getattr(st.session_state, 'suggested_categories', []),
+                    default=st.session_state.suggested_categories,
                     help="AI-suggested categories will be pre-selected when available"
                 )
                 
                 # Get existing tags for suggestions with cache version
                 existing_tags = get_tags(st.session_state.tags_cache_version, api)
-                suggested_tags = getattr(st.session_state, 'suggested_tags', [])
+                suggested_tags = st.session_state.suggested_tags
                 
                 # Create two columns for tag input
                 tag_col1, tag_col2 = st.columns([3, 1])

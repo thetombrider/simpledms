@@ -1,6 +1,11 @@
 from typing import List, Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import os
+from pathlib import Path
+
+# Get the root directory (two levels up from this file)
+ROOT_DIR = Path(__file__).parent.parent.parent.parent
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SimpleS3DMS"
@@ -34,7 +39,7 @@ class Settings(BaseSettings):
     ]
     
     class Config:
-        env_file = ".env"
+        env_file = ROOT_DIR / ".env"
         case_sensitive = True
 
 @lru_cache()

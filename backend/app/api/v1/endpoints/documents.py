@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from ....models.document import Document
 from ....services.b2 import B2Service
-from ....services.ai_analysis import AIAnalysisService
+from ....services.ai_analysis import AIAnalysisService, AIServiceError
 
 router = APIRouter()
 b2_service = B2Service()
@@ -176,27 +176,41 @@ async def analyze_document(
         # Read file content
         file_content = await file.read()
         
-        # Get suggestions
-        suggestions = await ai_service.get_suggestions(
-            file_content,
-            file.content_type or "application/octet-stream"
-        )
-        
-        # Get summary
-        summary = await ai_service.get_summary(
-            file_content,
-            file.content_type or "application/octet-stream"
-        )
-        
-        return {
-            "summary": summary,
-            "categories": suggestions["categories"],
-            "tags": suggestions["tags"]
-        }
-    except ValueError as e:
-        if "OPENAI_API_KEY" in str(e):
-            raise HTTPException(
-                status_code=503,
-                detail="OpenAI API is not configured. Please add OPENAI_API_KEY to your environment variables."
+        try:
+            # Get suggestions
+            suggestions = await ai_service.get_suggestions(
+                file_content,
+                file.content_type or "application/octet-stream"
             )
-        raise HTTPException(status_code=400, detail=str(e)) 
+            
+            # Get summary
+            summary = await ai_service.get_summary(
+                file_content,
+                file.content_type or "application/octet-stream"
+            )
+            
+            return {
+                "summary": summary,
+                "categories": suggestions["categories"],
+                "tags": suggestions["tags"]
+            }
+            
+        except AIServiceError as e:
+            error_status = {
+                "quota_exceeded": 402,  # Payment Required
+                "authentication_error": 401,  # Unauthorized
+                "configuration_error": 503,  # Service Unavailable
+                "api_error": 502,  # Bad Gateway
+                "processing_error": 500,  # Internal Server Error
+                "unknown_error": 500,  # Internal Server Error
+            }.get(e.error_type, 500)
+            
+            raise HTTPException(
+                status_code=error_status,
+                detail=e.message
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
