@@ -4,6 +4,7 @@ from .config import settings
 from ..models.document import Document
 from ..models.category import Category
 from ..models.tag import Tag
+from ..models.share import Share
 
 async def create_default_categories():
     """Create default categories if none exist"""
@@ -25,7 +26,7 @@ async def init_db():
     client = AsyncIOMotorClient(settings.MONGODB_URL)
     await init_beanie(
         database=client[settings.MONGODB_DB_NAME],
-        document_models=[Document, Category, Tag]
+        document_models=[Document, Category, Tag, Share]
     )
     
     # Create default categories

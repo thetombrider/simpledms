@@ -1,2 +1,2 @@
 """API v1 package.""" 
-from .endpoints import documents, categories, tags 
+from .endpoints import documents, categories, tags, shares 

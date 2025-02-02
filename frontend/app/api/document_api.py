@@ -256,4 +256,47 @@ class DocumentAPI:
                 return response.json()
                 
         except Exception as e:
-            raise ValueError(f"Error analyzing document: {str(e)}") 
+            raise ValueError(f"Error analyzing document: {str(e)}")
+
+    # Share-related methods
+    async def create_share(
+        self,
+        document_id: str,
+        owner_id: str,
+        expires_in_days: int = 7
+    ) -> Dict[str, Any]:
+        """Create a share link for a document"""
+        url = f"{self.base_url}/shares/"
+        data = {
+            "document_id": document_id,
+            "owner_id": owner_id,
+            "expires_in_days": expires_in_days
+        }
+        
+        async with await self._get_client() as client:
+            response = await client.post(url, json=data)
+            response.raise_for_status()
+            return response.json()
+
+    async def list_shares(
+        self,
+        owner_id: str,
+        include_expired: bool = False
+    ) -> List[Dict[str, Any]]:
+        """List shares for a user"""
+        url = f"{self.base_url}/shares/user/{owner_id}"
+        params = {"include_expired": include_expired}
+        
+        async with await self._get_client() as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+
+    async def delete_share(self, share_id: str, owner_id: str) -> None:
+        """Delete a share"""
+        url = f"{self.base_url}/shares/{share_id}"
+        params = {"owner_id": owner_id}
+        
+        async with await self._get_client() as client:
+            response = await client.delete(url, params=params)
+            response.raise_for_status() 

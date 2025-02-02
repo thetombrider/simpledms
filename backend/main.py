@@ -5,6 +5,7 @@ from app.core.init_db import init_db
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.categories import router as categories_router
 from app.api.v1.endpoints.tags import router as tags_router
+from app.api.v1.endpoints.shares import router as shares_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -29,6 +30,7 @@ async def health_check():
 app.include_router(documents_router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(categories_router, prefix="/api/v1/config/categories", tags=["categories"])
 app.include_router(tags_router, prefix="/api/v1/config/tags", tags=["tags"])
+app.include_router(shares_router, prefix="/api/v1/shares", tags=["shares"])
 
 @app.on_event("startup")
 async def startup_event():
