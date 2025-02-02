@@ -41,19 +41,34 @@ class DocumentService:
             file_name=file.filename,
             file_size=file_size,
             mime_type=mime_type,
-            s3_key=file_path,  # We'll keep the field name as s3_key for compatibility
+            s3_key=file_path,
             categories=categories,
             tags=tags,
             owner_id=owner_id
         )
         
-        # Upload file to B2
-        await self.b2_service.upload_file(file_content, file_path)
-        
-        # Save document metadata
-        await document.insert()
-        
-        return document
+        try:
+            # Upload file to B2 first
+            await self.b2_service.upload_file(file_content, file_path)
+            
+            try:
+                # Then save document metadata
+                await document.insert()
+                return document
+            except Exception as e:
+                # If MongoDB insert fails, clean up B2
+                try:
+                    await self.b2_service.delete_file(file_path)
+                except:
+                    pass  # Best effort cleanup
+                raise e
+                
+        except Exception as e:
+            # B2 upload failed, don't create MongoDB document
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error uploading file: {str(e)}"
+            )
 
     async def get_document(self, document_id: str, owner_id: str) -> Document:
         """Get a document by ID"""
@@ -117,10 +132,14 @@ class DocumentService:
         """Delete a document"""
         document = await self.get_document(document_id, owner_id)
         
-        # Delete from B2
-        await self.b2_service.delete_file(document.s3_key)
+        try:
+            # Delete from B2 first
+            await self.b2_service.delete_file(document.s3_key)
+        except HTTPException as e:
+            if e.status_code != 404:  # Ignore if already deleted
+                raise
         
-        # Delete metadata
+        # Then delete metadata
         await document.delete()
 
     async def generate_download_url(self, document_id: str, owner_id: str) -> str:
@@ -150,4 +169,16 @@ class DocumentService:
             document.tags = tags
             
         await document.save()
-        return document 
+        return document
+
+    async def cleanup_orphaned_documents(self) -> int:
+        """Clean up documents where B2 file is missing"""
+        cleaned = 0
+        async for doc in Document.find_all():
+            try:
+                await self.b2_service.get_file_info(doc.s3_key)
+            except HTTPException as e:
+                if e.status_code == 404:
+                    await doc.delete()
+                    cleaned += 1
+        return cleaned 
