@@ -1,69 +1,53 @@
 # SimpleS3DMS Development Roadmap
 
-## Version 0.1.2(Current) ✅
-- Core Features
-  - ✅ Document upload and storage in B2
-  - ✅ Basic document metadata management
-  - ✅ Categories and tags system
-  - ✅ Modern web interface with Streamlit
-  - ✅ RESTful API with FastAPI
+## Current Version (0.1.2)
+- ✅ Basic document upload and management
+- ✅ Category and tag system
+- ✅ B2 storage integration
+- ✅ MongoDB database
+- ✅ Frontend with Streamlit
+- ✅ Backend with FastAPI
+- ✅ AI-powered document analysis (using Claude)
+- ✅ Document title and description suggestions
+- ✅ Batch operations (upload, delete)
+- ✅ Document sharing capabilities with url shortener
 
-- AI Integration
-  - ✅ Document analysis with Claude
-  - ✅ Automatic category suggestions
-  - ✅ Smart tag recommendations
-  - ✅ AI-generated descriptions
+## Next Up (0.2.0)
+- [ ] User authentication system
+- [ ] Multi-user support
+- [ ] Role-based access control
+- [ ] S3 and other storage providers support
 
-- Document Sharing
-  - ✅ Secure share links with expiration
-  - ✅ URL shortening via is.gd
-  - ✅ Share management interface
-  - ✅ Automatic cleanup of expired shares
+### Version (0.2.5)
+- [ ] Document OCR with AWS Textract
+- [ ] Search functionality with Elasticsearch
 
-## Version 0.2.0 (In Progress) 🔄
-- Document Processing
-  - Document OCR for text extraction
-  - Document preview functionality
-  - Support for more file formats
-  - Batch upload improvements
+## Version 0.3.0
+- [ ] Document preview
+- [ ] Document versioning and history
+- [ ] Document collaboration features
+### Version 0.3.5
+- [ ] Custom metadata fields
+- [ ] Document workflows
+- [ ] Team workspaces
 
-- Search and Organization
-  - Enhanced search functionality
-  - Full-text search
-  - Advanced filtering options
-  - Custom metadata fields
+## Version 0.4.0
+- [ ] API key management
+- [ ] Integration webhooks
+- [ ] Document encryption
+- [ ] Automated backups
+- [ ] Audit logging
 
-- Document Management
-  - Document versioning
-  - Document relationships
-  - Bulk operations
-  - Export functionality
+## Nice to Have
+- [ ] Mobile app
+- [ ] Desktop sync client (with folder sync)
+- [ ] Browser extension
+- [ ] Custom themes 
 
-## Version 0.3.0 (Planned) 📋
-- User Management
-  - User authentication
-  - Role-based access control
-  - User groups and sharing
-  - Activity logging
-
-- Collaboration
-  - Document comments
-  - Share with groups
-  - Audit trails
-  - Notifications
-
-- Integration
-  - WebDAV support
-  - API key management
-  - Webhook support
-  - External storage providers
-
-## Future Considerations 🔮
-- Mobile app
-- Desktop sync client
-- Document workflows
-- E-signature integration
-- AI-powered document analysis improvements
-- Automated document classification
-- Document retention policies
-- Compliance features 
+Sooner or later:
+- s3 support
+- migration tools between buckets and providers
+- multi-bucket support
+- multi-storage provider support
+- bucket browsing and management
+- documentation
