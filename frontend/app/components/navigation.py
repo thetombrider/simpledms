@@ -3,7 +3,7 @@ import streamlit as st
 def show_navigation():
     """Show the navigation menu"""
     with st.sidebar:
-        st.title("SimpleS3DMS")
+        st.title("Simple DMS")
         
         # Navigation buttons
         with st.form("navigation_form"):
@@ -24,4 +24,4 @@ def show_navigation():
                 st.rerun()
             
         st.markdown("---")
-        st.caption("Version 0.1.0") 
+        st.caption("Version 0.1.2") 

@@ -6,7 +6,7 @@ import logging
 import os
 from ..models.document import Document
 from ..models.share import Share
-from .b2 import B2Service
+from .storage.factory import get_storage_provider
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ShareService:
     def __init__(self):
-        self.b2_service = B2Service()
+        self.storage = get_storage_provider()
         self.shortener = pyshorteners.Shortener()
         logger.info("ShareService initialized")
     
@@ -40,7 +40,7 @@ class ShareService:
                 raise ValueError("Access denied")
             
             # Generate B2 download URL
-            long_url = await self.b2_service.generate_download_url(
+            long_url = await self.storage.generate_download_url(
                 document.s3_key,
                 duration_in_seconds=expires_in_days * 24 * 3600
             )

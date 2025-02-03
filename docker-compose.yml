@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: simpledms-mongodb-1
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - simpledms_network
+
+  base:
+    image: simpledms-base
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: simpledms-backend-1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+      - base
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=simpledms
+      - B2_KEY_ID=${B2_KEY_ID}
+      - B2_APPLICATION_KEY=${B2_APPLICATION_KEY}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME}
+      - SECRET_KEY=${SECRET_KEY:-development_secret_key_please_change_in_production}
+    networks:
+      - simpledms_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: simpledms-frontend-1
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+      - base
+    environment:
+      - API_URL=http://backend:8080/api/v1
+    networks:
+      - simpledms_network
+
+networks:
+  simpledms_network:
+    driver: bridge
+    name: simpledms_network
+
+volumes:
+  mongodb_data:
+    name: simpledms_mongodb_data  # Named volume for easier backup/restore 

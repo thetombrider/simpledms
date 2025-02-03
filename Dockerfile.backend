@@ -1,0 +1,15 @@
+FROM simpledms-base
+
+WORKDIR /app
+
+# Copy backend code
+COPY backend/ .
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Expose the port
+EXPOSE 8080
+
+# Start the backend service
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

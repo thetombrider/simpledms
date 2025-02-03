@@ -8,6 +8,7 @@ from app.components.utils import (
     generate_title_from_filename,
     TEMP_USER_ID
 )
+import time
 
 def show_upload_page(api):
     """Upload page content"""
@@ -186,6 +187,9 @@ def show_upload_page(api):
                                     st.write(f"📄 {doc['title']} ({doc['file_name']})")
                                     st.caption(f"Size: {doc['file_size']} bytes")
                             
+                            # Add a small delay to ensure the success message is visible
+                            time.sleep(3)
+                            
                             # Reset states after successful upload
                             st.session_state.current_tags = []
                             st.session_state.suggested_title = ""
@@ -197,11 +201,9 @@ def show_upload_page(api):
                             # Force cache refresh after upload
                             invalidate_categories_cache()
                             invalidate_tags_cache()
-                            # Clear the file uploader
+                            # Clear the file uploader by rerunning
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error uploading documents: {str(e)}")
     except Exception as e:
         st.error(f"Error connecting to backend: {str(e)}")
-
-    st.write("This is the upload page content") 

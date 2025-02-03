@@ -4,11 +4,11 @@ import mimetypes
 from datetime import datetime
 
 from ..models.document import Document
-from .b2 import B2Service
+from .storage.factory import get_storage_provider
 
 class DocumentService:
     def __init__(self):
-        self.b2_service = B2Service()
+        self.storage = get_storage_provider()
 
     async def create_document(
         self,
@@ -48,23 +48,23 @@ class DocumentService:
         )
         
         try:
-            # Upload file to B2 first
-            await self.b2_service.upload_file(file_content, file_path)
+            # Upload file to storage first
+            await self.storage.upload_file(file_content, file_path)
             
             try:
                 # Then save document metadata
                 await document.insert()
                 return document
             except Exception as e:
-                # If MongoDB insert fails, clean up B2
+                # If MongoDB insert fails, clean up storage
                 try:
-                    await self.b2_service.delete_file(file_path)
+                    await self.storage.delete_file(file_path)
                 except:
                     pass  # Best effort cleanup
                 raise e
                 
         except Exception as e:
-            # B2 upload failed, don't create MongoDB document
+            # Storage upload failed, don't create MongoDB document
             raise HTTPException(
                 status_code=500,
                 detail=f"Error uploading file: {str(e)}"
@@ -77,11 +77,11 @@ class DocumentService:
             raise HTTPException(status_code=404, detail="Document not found")
         
         try:
-            # Verify file exists in B2
-            await self.b2_service.get_file_info(document.s3_key)
+            # Verify file exists in storage
+            await self.storage.get_file_info(document.s3_key)
         except HTTPException as e:
             if e.status_code == 404:
-                # File doesn't exist in B2, clean up orphaned metadata
+                # File doesn't exist in storage, clean up orphaned metadata
                 await document.delete()
                 raise HTTPException(
                     status_code=404,
@@ -113,11 +113,11 @@ class DocumentService:
         # Check each document's file existence and clean up orphaned ones
         for doc in documents:
             try:
-                await self.b2_service.get_file_info(doc.s3_key)
+                await self.storage.get_file_info(doc.s3_key)
                 valid_documents.append(doc)
             except HTTPException as e:
                 if e.status_code == 404:
-                    # File doesn't exist in B2, delete the orphaned metadata
+                    # File doesn't exist in storage, delete the orphaned metadata
                     await doc.delete()
                 else:
                     # For other errors, keep the document in the list
@@ -133,8 +133,8 @@ class DocumentService:
         document = await self.get_document(document_id, owner_id)
         
         try:
-            # Delete from B2 first
-            await self.b2_service.delete_file(document.s3_key)
+            # Delete from storage first
+            await self.storage.delete_file(document.s3_key)
         except HTTPException as e:
             if e.status_code != 404:  # Ignore if already deleted
                 raise
@@ -145,7 +145,7 @@ class DocumentService:
     async def generate_download_url(self, document_id: str, owner_id: str) -> str:
         """Generate a download URL for a document"""
         document = await self.get_document(document_id, owner_id)
-        return await self.b2_service.generate_download_url(document.s3_key)
+        return await self.storage.generate_download_url(document.s3_key)
 
     async def update_document(
         self,
@@ -172,11 +172,11 @@ class DocumentService:
         return document
 
     async def cleanup_orphaned_documents(self) -> int:
-        """Clean up documents where B2 file is missing"""
+        """Clean up documents where storage file is missing"""
         cleaned = 0
         async for doc in Document.find_all():
             try:
-                await self.b2_service.get_file_info(doc.s3_key)
+                await self.storage.get_file_info(doc.s3_key)
             except HTTPException as e:
                 if e.status_code == 404:
                     await doc.delete()

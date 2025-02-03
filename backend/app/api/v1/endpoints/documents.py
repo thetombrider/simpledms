@@ -3,11 +3,11 @@ from fastapi import APIRouter, File, Form, UploadFile, Query, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
 from ....models.document import Document
-from ....services.b2 import B2Service
+from ....services.storage.factory import get_storage_provider
 from ....services.ai_analysis import AIAnalysisService, AIServiceError
 
 router = APIRouter()
-b2_service = B2Service()
+storage = get_storage_provider()
 
 class BatchDeleteRequest(BaseModel):
     document_ids: List[str]
@@ -65,7 +65,7 @@ async def create_documents(
         )
         
         # Upload file to B2
-        await b2_service.upload_file(file_content, file_path)
+        await storage.upload_file(file_content, file_path)
         
         # Save document metadata
         await document.insert()
@@ -87,7 +87,7 @@ async def delete_documents(request: BatchDeleteRequest):
                 continue
             
             # Delete from B2
-            await b2_service.delete_file(document.s3_key)
+            await storage.delete_file(document.s3_key)
             
             # Delete metadata
             await document.delete()
@@ -134,7 +134,7 @@ async def create_document(
     )
     
     # Upload file to B2
-    await b2_service.upload_file(file_content, file_path)
+    await storage.upload_file(file_content, file_path)
     
     # Save document metadata
     await document.insert()
@@ -147,7 +147,7 @@ async def get_download_url(document_id: str, owner_id: str) -> dict:
     if not document or document.owner_id != owner_id:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    url = await b2_service.generate_download_url(document.s3_key)
+    url = await storage.generate_download_url(document.s3_key)
     return {"download_url": url}
 
 @router.delete("/{document_id}")
@@ -158,7 +158,7 @@ async def delete_document(document_id: str, owner_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
     
     # Delete from B2
-    await b2_service.delete_file(document.s3_key)
+    await storage.delete_file(document.s3_key)
     
     # Delete metadata
     await document.delete()

@@ -12,14 +12,14 @@ api = DocumentAPI(API_URL)
 
 # Set page config
 st.set_page_config(
-    page_title="SimpleS3DMS",
+    page_title="Simple DMS",
     page_icon="📄",
     layout="wide"
 )
 
 # Title
-st.title("📄 SimpleS3DMS")
-st.subheader("Simple Document Management System")
+st.title("📄 Simple DMS")
+st.subheader("A Simple Document Management System")
 
 # Initialize cache state
 init_cache_state()
